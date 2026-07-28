@@ -18,3 +18,9 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+AI_INTEGRATIONS_OPENAI_API_KEY = "use-openai-api-key-secret"
+AI_INTEGRATIONS_OPENAI_BASE_URL = "https://api.openai.com/v1"

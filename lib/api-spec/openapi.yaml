@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: lycmap.ai Study AI API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: quiz
+    description: Quiz generation and session management
+  - name: openai
+    description: OpenAI AI chat, image, and audio operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,302 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /quiz/generate:
+    post:
+      operationId: generateQuiz
+      tags: [quiz]
+      summary: Generate a quiz based on board, class, subject, chapter, level
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizRequest"
+      responses:
+        "200":
+          description: Generated quiz with questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSession"
+
+  /quiz/sessions:
+    get:
+      operationId: listQuizSessions
+      tags: [quiz]
+      summary: List recent quiz sessions
+      responses:
+        "200":
+          description: List of quiz sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizSessionSummary"
+
+  /quiz/sessions/{id}:
+    get:
+      operationId: getQuizSession
+      tags: [quiz]
+      summary: Get a quiz session with all questions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quiz session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSession"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /quiz/sessions/{id}/complete:
+    post:
+      operationId: completeQuizSession
+      tags: [quiz]
+      summary: Mark a quiz session as completed with score
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizCompletion"
+      responses:
+        "200":
+          description: Completed session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSession"
+
+  /quiz/stats:
+    get:
+      operationId: getQuizStats
+      tags: [quiz]
+      summary: Get quiz statistics and previous-year question frequency by topic
+      responses:
+        "200":
+          description: Stats overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizStats"
+
+  /quiz/formula-sheet:
+    post:
+      operationId: getFormulaSheet
+      tags: [quiz]
+      summary: Get formula sheet for a subject/chapter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChapterRequest"
+      responses:
+        "200":
+          description: Formula sheet data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FormulaSheet"
+
+  /quiz/short-notes:
+    post:
+      operationId: getShortNotes
+      tags: [quiz]
+      summary: Get short notes for a subject/chapter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChapterRequest"
+      responses:
+        "200":
+          description: Short notes data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShortNotes"
+
+  /quiz/upload:
+    post:
+      operationId: uploadDocument
+      tags: [quiz]
+      summary: Upload a document/image for AI analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpload"
+      responses:
+        "200":
+          description: Upload analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentAnalysis"
+
+  /openai/conversations:
+    get:
+      operationId: listOpenaiConversations
+      tags: [openai]
+      summary: List all conversations
+      responses:
+        "200":
+          description: List of conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenaiConversation"
+    post:
+      operationId: createOpenaiConversation
+      tags: [openai]
+      summary: Create a new conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenaiConversationInput"
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversation"
+
+  /openai/conversations/{id}:
+    get:
+      operationId: getOpenaiConversation
+      tags: [openai]
+      summary: Get conversation with messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiConversationWithMessages"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiError"
+    delete:
+      operationId: deleteOpenaiConversation
+      tags: [openai]
+      summary: Delete a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpenaiError"
+
+  /openai/conversations/{id}/messages:
+    get:
+      operationId: listOpenaiMessages
+      tags: [openai]
+      summary: List messages in a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenaiMessage"
+    post:
+      operationId: sendOpenaiMessage
+      tags: [openai]
+      summary: Send a text message and receive a streaming text response
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenaiMessageInput"
+      responses:
+        "200":
+          description: SSE stream of assistant text chunks
+          content:
+            text/event-stream: {}
+
+  /openai/conversations/{id}/voice-messages:
+    post:
+      operationId: sendOpenaiVoiceMessage
+      tags: [openai]
+      summary: Send audio and receive a streaming voice response
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenaiVoiceMessageInput"
+      responses:
+        "200":
+          description: SSE stream of transcript and audio chunks
+          content:
+            text/event-stream: {}
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +334,393 @@ components:
       required:
         - status
 
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    QuizRequest:
+      type: object
+      required: [board, className, subject, chapter, level]
+      properties:
+        board:
+          type: string
+          description: "CBSE, ICSE, SCERT, or Mixed"
+        className:
+          type: string
+          description: "Class 6 through Class 12"
+        subject:
+          type: string
+        chapter:
+          type: string
+        level:
+          type: string
+          description: "Easy, Medium, Hard, or Mixed"
+        questionCount:
+          type: integer
+          default: 20
+
+    ChapterRequest:
+      type: object
+      required: [board, className, subject, chapter]
+      properties:
+        board:
+          type: string
+        className:
+          type: string
+        subject:
+          type: string
+        chapter:
+          type: string
+
+    QuizQuestion:
+      type: object
+      required: [id, questionText, options, correctAnswer, explanation, type]
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: integer
+        questionText:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: string
+        explanation:
+          type: string
+        type:
+          type: string
+          description: "previous_year or ai_generated"
+        year:
+          type: ["string", "null"]
+        topic:
+          type: string
+        difficulty:
+          type: string
+
+    QuizSession:
+      type: object
+      required: [id, board, className, subject, chapter, level, status, createdAt, questions]
+      properties:
+        id:
+          type: integer
+        board:
+          type: string
+        className:
+          type: string
+        subject:
+          type: string
+        chapter:
+          type: string
+        level:
+          type: string
+        status:
+          type: string
+          description: "in_progress or completed"
+        score:
+          type: ["integer", "null"]
+        totalQuestions:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+
+    QuizSessionSummary:
+      type: object
+      required: [id, board, className, subject, chapter, level, status, totalQuestions, createdAt]
+      properties:
+        id:
+          type: integer
+        board:
+          type: string
+        className:
+          type: string
+        subject:
+          type: string
+        chapter:
+          type: string
+        level:
+          type: string
+        status:
+          type: string
+        score:
+          type: ["integer", "null"]
+        totalQuestions:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    QuizCompletion:
+      type: object
+      required: [score]
+      properties:
+        score:
+          type: integer
+
+    QuizStats:
+      type: object
+      required: [totalSessions, totalQuestions, averageScore, topicFrequency, subjectBreakdown]
+      properties:
+        totalSessions:
+          type: integer
+        totalQuestions:
+          type: integer
+        averageScore:
+          type: number
+        topicFrequency:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicFrequency"
+        subjectBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubjectBreakdown"
+
+    TopicFrequency:
+      type: object
+      required: [topic, count, subject, chapter]
+      properties:
+        topic:
+          type: string
+        count:
+          type: integer
+        subject:
+          type: string
+        chapter:
+          type: string
+
+    SubjectBreakdown:
+      type: object
+      required: [subject, count, averageScore]
+      properties:
+        subject:
+          type: string
+        count:
+          type: integer
+        averageScore:
+          type: number
+
+    FormulaFormula:
+      type: object
+      required: [name, formula, description, unit]
+      properties:
+        name:
+          type: string
+        formula:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+        derivation:
+          type: ["string", "null"]
+
+    FormulaSection:
+      type: object
+      required: [sectionTitle, formulas]
+      properties:
+        sectionTitle:
+          type: string
+        formulas:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormulaFormula"
+
+    FormulaSheet:
+      type: object
+      required: [subject, chapter, sections, previousYearTopics]
+      properties:
+        subject:
+          type: string
+        chapter:
+          type: string
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/FormulaSection"
+        previousYearTopics:
+          type: array
+          items:
+            type: string
+
+    ShortNotesItem:
+      type: object
+      required: [heading, content, keyPoints]
+      properties:
+        heading:
+          type: string
+        content:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        equations:
+          type: array
+          items:
+            type: string
+        previousYearRelevance:
+          type: ["string", "null"]
+
+    ShortNotes:
+      type: object
+      required: [subject, chapter, items, previousYearGraph]
+      properties:
+        subject:
+          type: string
+        chapter:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShortNotesItem"
+        previousYearGraph:
+          type: array
+          items:
+            $ref: "#/components/schemas/PreviousYearDataPoint"
+
+    PreviousYearDataPoint:
+      type: object
+      required: [year, questionsCount, topics]
+      properties:
+        year:
+          type: string
+        questionsCount:
+          type: integer
+        topics:
+          type: array
+          items:
+            type: string
+
+    DocumentUpload:
+      type: object
+      required: [fileName, fileData, mimeType]
+      properties:
+        fileName:
+          type: string
+        fileData:
+          type: string
+          description: Base64-encoded file content
+        mimeType:
+          type: string
+
+    DocumentAnalysis:
+      type: object
+      required: [extractedText, detectedSubject, detectedChapter, suggestedQuestions]
+      properties:
+        extractedText:
+          type: string
+        detectedSubject:
+          type: ["string", "null"]
+        detectedChapter:
+          type: ["string", "null"]
+        suggestedQuestions:
+          type: array
+          items:
+            type: string
+
+    OpenaiConversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - createdAt
+
+    OpenaiMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        role:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - conversationId
+        - role
+        - content
+        - createdAt
+
+    OpenaiConversationInput:
+      type: object
+      properties:
+        title:
+          type: string
+      required:
+        - title
+
+    OpenaiMessageInput:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    OpenaiVoiceMessageInput:
+      type: object
+      properties:
+        audio:
+          type: string
+          description: Base64-encoded audio data
+      required:
+        - audio
+
+    OpenaiConversationWithMessages:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpenaiMessage"
+      required:
+        - id
+        - title
+        - createdAt
+        - messages
+
+    OpenaiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
