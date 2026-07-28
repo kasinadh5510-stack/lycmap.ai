@@ -261,14 +261,19 @@ router.post("/quiz/formula-sheet", async (req, res): Promise<void> => {
   const { board, className, subject, chapter } = parsed.data;
 
   const prompt = `You are an expert teacher for ${board} Class ${className} ${subject}.
-Create a comprehensive formula sheet for the chapter: "${chapter}".
+Create a COMPLETE and EXHAUSTIVE formula sheet for the ENTIRE chapter: "${chapter}".
 
-Write ALL equations as plain readable text (e.g., "F = ma", "E = mc^2", "KE = (1/2)mv^2").
-NEVER use LaTeX, dollar signs, special symbols like #, ^, or any math notation.
+IMPORTANT REQUIREMENTS:
+- Cover EVERY single formula, equation, law, and relation in this chapter — leave nothing out.
+- Include ALL derivation steps for important formulas.
+- Group formulas logically into sections (e.g., by topic or concept).
+- Write ALL equations as plain readable text (e.g., "F = ma", "E = mc^2", "KE = (1/2)mv^2", "sin^2(theta) + cos^2(theta) = 1").
+- NEVER use LaTeX, dollar signs, backslashes, or special math symbols.
+- Each formula must have its name, the equation, a description of what each variable means, SI units, and a brief derivation note if applicable.
+- Aim for at least 20-40 formulas depending on the chapter size. Do not skip minor but important results.
+- Also list 8-12 topics from this chapter that most frequently appear in board exam previous year papers.
 
-Also list 5-8 topics from this chapter that frequently appear in CBSE previous year board exams.
-
-Respond with JSON only (no markdown):
+Respond with JSON only (no markdown, no code fences):
 {
   "subject": "${subject}",
   "chapter": "${chapter}",
@@ -279,9 +284,9 @@ Respond with JSON only (no markdown):
         {
           "name": "Formula Name",
           "formula": "plain text equation",
-          "description": "what it represents",
-          "unit": "SI unit",
-          "derivation": "brief derivation if important or null"
+          "description": "what each variable represents",
+          "unit": "SI unit or dimensionless",
+          "derivation": "brief derivation or key insight, or null"
         }
       ]
     }
@@ -290,7 +295,7 @@ Respond with JSON only (no markdown):
 }`;
 
   try {
-    const content = await generateText(prompt, 4096);
+    const content = await generateText(prompt, 8192);
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     res.json(JSON.parse(cleaned));
   } catch (err) {
@@ -310,25 +315,29 @@ router.post("/quiz/short-notes", async (req, res): Promise<void> => {
   const { board, className, subject, chapter } = parsed.data;
 
   const prompt = `You are an expert teacher for ${board} Class ${className} ${subject}.
-Create comprehensive short notes for the chapter: "${chapter}".
+Create COMPLETE and DETAILED short notes covering the ENTIRE chapter: "${chapter}".
 
-Write ALL equations as plain readable text (e.g., "F = ma", "v = u + at").
-NEVER use LaTeX, dollar signs, or special math symbols.
+IMPORTANT REQUIREMENTS:
+- Cover EVERY concept, definition, law, principle, and topic in this chapter — do not skip anything.
+- For each concept write a thorough explanation (4-6 sentences minimum), not just a brief line.
+- Include ALL equations and formulas relevant to each concept, written as plain readable text (e.g., "F = ma", "v = u + at", "E = (1/2)mv^2").
+- NEVER use LaTeX, dollar signs, backslashes, or special math symbols.
+- keyPoints must be detailed bullet points (at least 4-6 per concept), not vague one-liners.
+- Mark which concepts are heavily tested in board exams with previousYearRelevance.
+- Aim for at least 12-20 concept items depending on chapter size. Cover every subtopic.
+- Also provide a year-wise graph of how many questions from this chapter appeared in CBSE/ICSE board exams from 2015-2024.
 
-Base the notes on what is most frequently asked in CBSE/ICSE previous year board exams (2015-2024).
-Also provide a graph dataset showing how many questions from this chapter appeared in each board exam year.
-
-Respond with JSON only (no markdown):
+Respond with JSON only (no markdown, no code fences):
 {
   "subject": "${subject}",
   "chapter": "${chapter}",
   "items": [
     {
       "heading": "concept heading",
-      "content": "explanation (2-3 sentences)",
-      "keyPoints": ["point 1", "point 2"],
-      "equations": ["plain text equation 1"],
-      "previousYearRelevance": "why this is important for exams or null"
+      "content": "thorough explanation of the concept (4-6 sentences)",
+      "keyPoints": ["detailed point 1", "detailed point 2", "detailed point 3", "detailed point 4"],
+      "equations": ["plain text equation 1", "plain text equation 2"],
+      "previousYearRelevance": "exam importance and typical question types, or null"
     }
   ],
   "previousYearGraph": [
