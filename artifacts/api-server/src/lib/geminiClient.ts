@@ -1,9 +1,14 @@
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 
-if (!process.env.GOOGLE_API_KEY) {
-  throw new Error("GOOGLE_API_KEY must be set. Please add your Google API key as a secret.");
+if (!process.env.GROQ_API_KEY) {
+  throw new Error("GROQ_API_KEY must be set. Please add your Groq API key as a secret.");
 }
 
-export const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+// Groq is OpenAI-compatible — free tier, no credit card needed
+export const ai = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
+});
 
-export const GEMINI_MODEL = "gemini-2.0-flash";
+// Best free Groq model for quiz/tutor tasks
+export const GEMINI_MODEL = "llama-3.3-70b-versatile";

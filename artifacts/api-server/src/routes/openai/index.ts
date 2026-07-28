@@ -115,22 +115,18 @@ router.post("/openai/conversations/:id/messages", async (req, res): Promise<void
 
   let fullResponse = "";
   try {
-    const stream = await ai.models.generateContentStream({
+    const stream = await ai.chat.completions.create({
       model: GEMINI_MODEL,
-      contents: [
-        // Prepend system prompt as first user turn + model ack
-        { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
-        { role: "model", parts: [{ text: "Understood. I am lycmap.ai, ready to help." }] },
-        ...history.map((m) => ({
-          role: m.role === "assistant" ? "model" : "user",
-          parts: [{ text: m.content }],
-        })),
+      max_tokens: 8192,
+      stream: true,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
       ],
-      config: { maxOutputTokens: 8192 },
     });
 
     for await (const chunk of stream) {
-      const text = chunk.text;
+      const text = chunk.choices[0]?.delta?.content;
       if (text) {
         fullResponse += text;
         res.write(`data: ${JSON.stringify({ content: text })}\n\n`);

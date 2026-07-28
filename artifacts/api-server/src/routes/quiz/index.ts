@@ -15,12 +15,12 @@ import { ai, GEMINI_MODEL } from "../../lib/geminiClient";
 const router: IRouter = Router();
 
 async function generateText(prompt: string, maxTokens = 8192): Promise<string> {
-  const response = await ai.models.generateContent({
+  const response = await ai.chat.completions.create({
     model: GEMINI_MODEL,
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: { maxOutputTokens: maxTokens },
+    max_tokens: maxTokens,
+    messages: [{ role: "user", content: prompt }],
   });
-  return response.text ?? "";
+  return response.choices[0]?.message?.content ?? "";
 }
 
 // POST /quiz/generate
@@ -364,18 +364,18 @@ router.post("/quiz/upload", async (req, res): Promise<void> => {
     let content: string;
 
     if (mimeType.startsWith("image/")) {
-      const response = await ai.models.generateContent({
+      const response = await ai.chat.completions.create({
         model: GEMINI_MODEL,
-        contents: [{
+        max_tokens: 2048,
+        messages: [{
           role: "user",
-          parts: [
-            { text: "Analyze this study material image and extract content for quiz generation. Write equations as plain text. Respond with JSON only: {\"extractedText\": \"summary\", \"detectedSubject\": \"subject or null\", \"detectedChapter\": \"chapter or null\", \"suggestedQuestions\": [\"question?\"]}" },
-            { inlineData: { mimeType, data: fileData } },
+          content: [
+            { type: "text", text: "Analyze this study material image and extract content for quiz generation. Write equations as plain text. Respond with JSON only: {\"extractedText\": \"summary\", \"detectedSubject\": \"subject or null\", \"detectedChapter\": \"chapter or null\", \"suggestedQuestions\": [\"question?\"]}" },
+            { type: "image_url", image_url: { url: `data:${mimeType};base64,${fileData}` } },
           ],
         }],
-        config: { maxOutputTokens: 2048 },
       });
-      content = response.text ?? "{}";
+      content = response.choices[0]?.message?.content ?? "{}";
     } else {
       const prompt = `Analyze this uploaded study material (file: ${fileName}).
 Extract the text content and identify the subject and chapter.
