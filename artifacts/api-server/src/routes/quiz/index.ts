@@ -9,10 +9,19 @@ import {
   GetShortNotesBody,
   UploadDocumentBody,
 } from "@workspace/api-zod";
-import { eq, desc, sql } from "drizzle-orm";
-import { openai } from "../../lib/openaiClient";
+import { eq, desc } from "drizzle-orm";
+import { ai, GEMINI_MODEL } from "../../lib/geminiClient";
 
 const router: IRouter = Router();
+
+async function generateText(prompt: string, maxTokens = 8192): Promise<string> {
+  const response = await ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: { maxOutputTokens: maxTokens },
+  });
+  return response.text ?? "";
+}
 
 // POST /quiz/generate
 router.post("/quiz/generate", async (req, res): Promise<void> => {
@@ -66,18 +75,11 @@ Respond with a JSON array only (no markdown, no code fences):
   }>;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_completion_tokens: 8192,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const content = completion.choices[0]?.message?.content ?? "[]";
-    // Strip markdown code fences if present
+    const content = await generateText(prompt, 8192);
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     questionsData = JSON.parse(cleaned);
   } catch (err) {
-    req.log.error({ err }, "Failed to generate quiz from OpenAI");
+    req.log.error({ err }, "Failed to generate quiz from Gemini");
     res.status(500).json({ error: "Failed to generate quiz questions" });
     return;
   }
@@ -218,7 +220,6 @@ router.get("/quiz/stats", async (_req, res): Promise<void> => {
     ? completedSessions.reduce((sum, s) => sum + (s.score! / s.totalQuestions) * 100, 0) / completedSessions.length
     : 0;
 
-  // Get topic frequency from questions
   const questions = await db.select().from(quizQuestions);
   const topicMap: Record<string, { count: number; subject: string; chapter: string }> = {};
   for (const q of questions) {
@@ -234,7 +235,6 @@ router.get("/quiz/stats", async (_req, res): Promise<void> => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 20);
 
-  // Subject breakdown
   const subjectMap: Record<string, { count: number; scores: number[] }> = {};
   for (const s of sessions) {
     if (!subjectMap[s.subject]) subjectMap[s.subject] = { count: 0, scores: [] };
@@ -281,21 +281,16 @@ Respond with JSON only (no markdown):
           "formula": "plain text equation",
           "description": "what it represents",
           "unit": "SI unit",
-          "derivation": "brief derivation if important" or null
+          "derivation": "brief derivation if important or null"
         }
       ]
     }
   ],
-  "previousYearTopics": ["topic1", "topic2", ...]
+  "previousYearTopics": ["topic1", "topic2"]
 }`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_completion_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const content = completion.choices[0]?.message?.content ?? "{}";
+    const content = await generateText(prompt, 4096);
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     res.json(JSON.parse(cleaned));
   } catch (err) {
@@ -331,9 +326,9 @@ Respond with JSON only (no markdown):
     {
       "heading": "concept heading",
       "content": "explanation (2-3 sentences)",
-      "keyPoints": ["point 1", "point 2", ...],
-      "equations": ["plain text equation 1", ...],
-      "previousYearRelevance": "why this is important for exams" or null
+      "keyPoints": ["point 1", "point 2"],
+      "equations": ["plain text equation 1"],
+      "previousYearRelevance": "why this is important for exams or null"
     }
   ],
   "previousYearGraph": [
@@ -346,12 +341,7 @@ Respond with JSON only (no markdown):
 }`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_completion_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const content = completion.choices[0]?.message?.content ?? "{}";
+    const content = await generateText(prompt, 4096);
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     res.json(JSON.parse(cleaned));
   } catch (err) {
@@ -370,36 +360,37 @@ router.post("/quiz/upload", async (req, res): Promise<void> => {
 
   const { fileName, fileData, mimeType } = parsed.data;
 
-  const prompt = `Analyze this uploaded study material (file: ${fileName}, type: ${mimeType}).
+  try {
+    let content: string;
+
+    if (mimeType.startsWith("image/")) {
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: [{
+          role: "user",
+          parts: [
+            { text: "Analyze this study material image and extract content for quiz generation. Write equations as plain text. Respond with JSON only: {\"extractedText\": \"summary\", \"detectedSubject\": \"subject or null\", \"detectedChapter\": \"chapter or null\", \"suggestedQuestions\": [\"question?\"]}" },
+            { inlineData: { mimeType, data: fileData } },
+          ],
+        }],
+        config: { maxOutputTokens: 2048 },
+      });
+      content = response.text ?? "{}";
+    } else {
+      const prompt = `Analyze this uploaded study material (file: ${fileName}).
 Extract the text content and identify the subject and chapter.
 Also suggest 3-5 quiz questions based on the content.
-The file is base64 encoded. Describe what you can infer from the filename and any context.
 
 Respond with JSON only:
 {
   "extractedText": "summary of the document content",
   "detectedSubject": "subject name or null",
   "detectedChapter": "chapter name or null",
-  "suggestedQuestions": ["question 1?", "question 2?", ...]
+  "suggestedQuestions": ["question 1?", "question 2?"]
 }`;
+      content = await generateText(prompt, 2048);
+    }
 
-  try {
-    const messages: OpenAI.ChatCompletionMessageParam[] = mimeType.startsWith("image/")
-      ? [{
-          role: "user",
-          content: [
-            { type: "text", text: "Analyze this study material image and extract content for quiz generation. Write equations as plain text." },
-            { type: "image_url", image_url: { url: `data:${mimeType};base64,${fileData}` } },
-          ],
-        }]
-      : [{ role: "user", content: prompt }];
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_completion_tokens: 2048,
-      messages,
-    });
-    const content = completion.choices[0]?.message?.content ?? "{}";
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     res.json(JSON.parse(cleaned));
   } catch (err) {
