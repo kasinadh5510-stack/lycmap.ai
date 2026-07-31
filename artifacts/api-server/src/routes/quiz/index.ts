@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-zod";
 import { eq, desc } from "drizzle-orm";
 import { ai, GEMINI_MODEL } from "../../lib/geminiClient";
+import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
 
@@ -79,7 +80,7 @@ Respond with a JSON array only (no markdown, no code fences):
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     questionsData = JSON.parse(cleaned);
   } catch (err) {
-    req.log.error({ err }, "Failed to generate quiz from Gemini");
+    logger.error({ err }, "Failed to generate quiz from Gemini");
     res.status(500).json({ error: "Failed to generate quiz questions" });
     return;
   }
@@ -299,7 +300,7 @@ Respond with JSON only (no markdown, no code fences):
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     res.json(JSON.parse(cleaned));
   } catch (err) {
-    req.log.error({ err }, "Failed to generate formula sheet");
+    logger.error({ err }, "Failed to generate formula sheet");
     res.status(500).json({ error: "Failed to generate formula sheet" });
   }
 });
@@ -354,7 +355,7 @@ Respond with JSON only (no markdown, no code fences):
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     res.json(JSON.parse(cleaned));
   } catch (err) {
-    req.log.error({ err }, "Failed to generate short notes");
+    logger.error({ err }, "Failed to generate short notes");
     res.status(500).json({ error: "Failed to generate short notes" });
   }
 });
@@ -403,7 +404,7 @@ Respond with JSON only:
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     res.json(JSON.parse(cleaned));
   } catch (err) {
-    req.log.error({ err }, "Failed to analyze document");
+    logger.error({ err }, "Failed to analyze document");
     res.status(500).json({ error: "Failed to analyze document" });
   }
 });

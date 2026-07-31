@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-zod";
 import { eq, asc } from "drizzle-orm";
 import { ai, GEMINI_MODEL } from "../../lib/geminiClient";
+import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
 
@@ -142,7 +143,7 @@ router.post("/openai/conversations/:id/messages", async (req, res): Promise<void
 
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
   } catch (err) {
-    req.log.error({ err }, "Gemini SSE streaming error");
+    logger.error({ err }, "Gemini SSE streaming error");
     res.write(`data: ${JSON.stringify({ error: "AI error" })}\n\n`);
   }
   res.end();
