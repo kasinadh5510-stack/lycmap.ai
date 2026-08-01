@@ -1,13 +1,9 @@
 {
   "buildCommand": "cd ../.. && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/lycmap run build",
   "outputDirectory": "dist/public",
-  "installCommand": "echo 'install handled by buildCommand'",
+  "installCommand": "echo skip",
   "framework": null,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "env": {
-    "BASE_PATH": "/",
-    "NODE_ENV": "production"
-  }
+  ]
 }

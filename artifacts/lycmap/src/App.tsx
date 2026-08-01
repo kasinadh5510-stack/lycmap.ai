@@ -3,6 +3,13 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
 import { AppShell } from '@/components/layout/app-shell';
+import { setBaseUrl } from '@workspace/api-client-react';
+
+// In production (Vercel/Render), point API calls at the backend service.
+// VITE_API_URL e.g. "https://lycmap-api.onrender.com"
+// Leave unset for local dev — relative /api/... calls work via same origin.
+const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+if (apiUrl) setBaseUrl(apiUrl);
 
 import Home from '@/pages/home';
 import QuizSetup from '@/pages/quiz-setup';
