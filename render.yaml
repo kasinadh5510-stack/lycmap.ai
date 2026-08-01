@@ -1,0 +1,43 @@
+services:
+  # ── Backend API ────────────────────────────────────────────────────────────
+  - type: web
+    name: lycmap-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: "corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-server run build"
+    startCommand: "node artifacts/api-server/dist/index.mjs"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GROQ_API_KEY
+        sync: false          # set manually in Render dashboard
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lycmap-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true  # Render auto-generates a secure random value
+
+  # ── Frontend (static site) ─────────────────────────────────────────────────
+  - type: web
+    name: lycmap-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    buildCommand: "corepack enable && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/lycmap run build"
+    staticPublishPath: artifacts/lycmap/dist/public
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BASE_PATH
+        value: /
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html   # SPA fallback so React Router works
+
+databases:
+  - name: lycmap-db
+    databaseName: lycmap
+    plan: free
